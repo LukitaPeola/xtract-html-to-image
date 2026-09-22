@@ -1,14 +1,9 @@
 {
   "name": "xtract-html-to-image",
   "version": "1.0.0",
-  "description": "Serverless HTML to Image (PNG) microservice for Xtract carousels and marketing",
+  "description": "Serverless Vercel OG image renderer for Xtract carousels",
   "main": "api/render.js",
-  "type": "module",
-  "scripts": {
-    "start": "node api/render.js"
-  },
   "dependencies": {
-    "@sparticuz/chromium-min": "^131.0.1",
-    "puppeteer-core": "^23.11.1"
+    "@vercel/og": "^0.6.5"
   }
 }
