@@ -128,6 +128,45 @@ function buildSlideSvg({
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
   <defs>
+    <style>
+      @font-face {
+        font-family: 'AppFont';
+        src: local('Plus Jakarta Sans'), local('Inter'), local('Roboto');
+        font-weight: 400;
+      }
+      @font-face {
+        font-family: 'AppFont';
+        src: local('Plus Jakarta Sans'), local('Inter'), local('Roboto');
+        font-weight: 700;
+      }
+      text {
+        font-family: 'AppFont', 'Plus Jakarta Sans', sans-serif;
+      }
+      .badge-text {
+        font-family: 'AppFont', 'Plus Jakarta Sans', sans-serif;
+        font-size: 20px;
+        font-weight: 700;
+        fill: ${t.accent};
+      }
+      .headline-text {
+        font-family: 'AppFont', 'Plus Jakarta Sans', sans-serif;
+        font-size: 58px;
+        font-weight: 700;
+        fill: ${t.textMain};
+      }
+      .body-text {
+        font-family: 'AppFont', 'Plus Jakarta Sans', sans-serif;
+        font-size: 30px;
+        font-weight: 400;
+        fill: ${t.textMuted};
+      }
+      .footer-text {
+        font-family: 'AppFont', 'Plus Jakarta Sans', sans-serif;
+        font-size: 24px;
+        font-weight: 700;
+        fill: ${t.accent};
+      }
+    </style>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="${t.bgStart}" />
       <stop offset="100%" stop-color="${t.bgEnd}" />
@@ -147,7 +186,7 @@ function buildSlideSvg({
   <g transform="translate(90, 100)">
     <rect width="150" height="52" rx="26" fill="${t.cardBg}" stroke="${t.border}" stroke-width="1.5" />
     <circle cx="28" cy="26" r="5" fill="${t.accent}" />
-    <text x="46" y="34" fill="${t.accent}" font-family="Inter, Plus Jakarta Sans, sans-serif" font-size="20" font-weight="bold" letter-spacing="1">${escapeXml(badge)}</text>
+    <text x="46" y="34" class="badge-text" letter-spacing="1">${escapeXml(badge)}</text>
   </g>
 
   <!-- Headline -->
@@ -155,7 +194,7 @@ function buildSlideSvg({
     ${headlineLines
       .map(
         (line, idx) =>
-          `<text x="0" y="${headlineStartY + idx * headlineLineHeight}" fill="${t.textMain}" font-family="Inter, Plus Jakarta Sans, sans-serif" font-size="58" font-weight="bold" letter-spacing="-1">${escapeXml(line)}</text>`
+          `<text x="0" y="${headlineStartY + idx * headlineLineHeight}" class="headline-text" letter-spacing="-1">${escapeXml(line)}</text>`
       )
       .join('\n    ')}
   </g>
@@ -168,7 +207,7 @@ function buildSlideSvg({
     ${bodyLines
       .map(
         (line, idx) =>
-          `<text x="44" y="${64 + idx * 50}" fill="${t.textMuted}" font-family="Inter, Plus Jakarta Sans, sans-serif" font-size="30" font-weight="normal">${escapeXml(line)}</text>`
+          `<text x="44" y="${64 + idx * 50}" class="body-text">${escapeXml(line)}</text>`
       )
       .join('\n    ')}
   </g>`
@@ -179,7 +218,7 @@ function buildSlideSvg({
   <g transform="translate(90, 1220)">
     <line x1="0" y1="0" x2="900" y2="0" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
     <!-- Hint -->
-    <text x="900" y="52" text-anchor="end" fill="${t.accent}" font-family="Inter, Plus Jakarta Sans, sans-serif" font-size="24" font-weight="bold">${escapeXml(footer_hint)}</text>
+    <text x="900" y="52" text-anchor="end" class="footer-text">${escapeXml(footer_hint)}</text>
   </g>
 </svg>`;
 }
