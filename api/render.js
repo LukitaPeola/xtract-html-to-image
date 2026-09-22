@@ -2,14 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import { Resvg } from '@resvg/resvg-js';
 
-let fontRegular = null;
-let fontBold = null;
+let fontBase64 = '';
+let fontBoldBase64 = '';
 
 try {
-  fontRegular = fs.readFileSync(path.join(process.cwd(), 'fonts', 'font.ttf'));
-  fontBold = fs.readFileSync(path.join(process.cwd(), 'fonts', 'font-bold.ttf'));
+  fontBase64 = fs.readFileSync(path.join(process.cwd(), 'fonts', 'font.ttf')).toString('base64');
+  fontBoldBase64 = fs.readFileSync(path.join(process.cwd(), 'fonts', 'font-bold.ttf')).toString('base64');
 } catch (e) {
-  console.warn('Could not load bundled fonts:', e.message);
+  console.warn('Could not read font files:', e.message);
 }
 
 function wrapText(text, maxCharsPerLine) {
@@ -95,6 +95,33 @@ function buildSlideSvg({
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
   <defs>
+    <style>
+      ${
+        fontBase64
+          ? `@font-face {
+        font-family: 'CustomFont';
+        src: url('data:font/ttf;base64,${fontBase64}') format('truetype');
+        font-weight: 400;
+      }`
+          : ''
+      }
+      ${
+        fontBoldBase64
+          ? `@font-face {
+        font-family: 'CustomFontBold';
+        src: url('data:font/ttf;base64,${fontBoldBase64}') format('truetype');
+        font-weight: 700;
+      }`
+          : ''
+      }
+      text {
+        font-family: 'CustomFont', 'CustomFontBold', -apple-system, sans-serif;
+      }
+      .bold-text {
+        font-family: 'CustomFontBold', 'CustomFont', -apple-system, sans-serif;
+        font-weight: 700;
+      }
+    </style>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="${t.bgStart}" />
       <stop offset="100%" stop-color="${t.bgEnd}" />
@@ -114,7 +141,7 @@ function buildSlideSvg({
   <g transform="translate(90, 100)">
     <rect width="150" height="52" rx="26" fill="${t.cardBg}" stroke="${t.border}" stroke-width="1.5" />
     <circle cx="28" cy="26" r="5" fill="${t.accent}" />
-    <text x="46" y="34" fill="${t.accent}" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="1">${escapeXml(badge)}</text>
+    <text x="46" y="34" class="bold-text" fill="${t.accent}" font-size="20" letter-spacing="1">${escapeXml(badge)}</text>
   </g>
 
   <!-- Headline -->
@@ -122,7 +149,7 @@ function buildSlideSvg({
     ${headlineLines
       .map(
         (line, idx) =>
-          `<text x="0" y="${headlineStartY + idx * headlineLineHeight}" fill="${t.textMain}" font-family="Segoe UI, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="-1">${escapeXml(line)}</text>`
+          `<text x="0" y="${headlineStartY + idx * headlineLineHeight}" class="bold-text" fill="${t.textMain}" font-size="58" letter-spacing="-1">${escapeXml(line)}</text>`
       )
       .join('\n    ')}
   </g>
@@ -135,7 +162,7 @@ function buildSlideSvg({
     ${bodyLines
       .map(
         (line, idx) =>
-          `<text x="44" y="${64 + idx * 50}" fill="${t.textMuted}" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="400" line-height="1.5">${escapeXml(line)}</text>`
+          `<text x="44" y="${64 + idx * 50}" fill="${t.textMuted}" font-size="30" line-height="1.5">${escapeXml(line)}</text>`
       )
       .join('\n    ')}
   </g>`
@@ -146,7 +173,7 @@ function buildSlideSvg({
   <g transform="translate(90, 1220)">
     <line x1="0" y1="0" x2="900" y2="0" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
     <!-- Hint -->
-    <text x="900" y="52" text-anchor="end" fill="${t.accent}" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">${escapeXml(footer_hint)}</text>
+    <text x="900" y="52" class="bold-text" text-anchor="end" fill="${t.accent}" font-size="24">${escapeXml(footer_hint)}</text>
   </g>
 </svg>`;
 }
@@ -170,7 +197,11 @@ export default async function handler(req, res) {
 
     const svgContent = bodyData.svg || buildSlideSvg(bodyData);
 
-    const fontBuffers = [fontRegular, fontBold].filter(Boolean);
+    const fontBuffers = [];
+    try {
+      const fb = fs.readFileSync(path.join(process.cwd(), 'fonts', 'font.ttf'));
+      fontBuffers.push(fb);
+    } catch (e) {}
 
     const resvg = new Resvg(svgContent, {
       fitTo: {
@@ -179,9 +210,7 @@ export default async function handler(req, res) {
       },
       font: {
         fontBuffers,
-        defaultFontFamily: 'Segoe UI',
-        sansSerifFamily: 'Segoe UI',
-        serifFamily: 'Segoe UI',
+        defaultFontFamily: 'CustomFont',
       },
     });
 
