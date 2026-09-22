@@ -28,7 +28,13 @@ export default async function handler(req, res) {
   try {
     let bodyData = {};
     if (req.method === 'POST') {
-      bodyData = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+      if (Buffer.isBuffer(req.body)) {
+        bodyData = JSON.parse(req.body.toString('utf-8'));
+      } else if (typeof req.body === 'string') {
+        bodyData = JSON.parse(req.body);
+      } else if (typeof req.body === 'object' && req.body !== null) {
+        bodyData = req.body;
+      }
     } else {
       bodyData = req.query || {};
     }
