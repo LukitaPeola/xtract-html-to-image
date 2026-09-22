@@ -180,6 +180,8 @@ export default async function handler(req, res) {
       font: {
         fontBuffers,
         defaultFontFamily: 'Segoe UI',
+        sansSerifFamily: 'Segoe UI',
+        serifFamily: 'Segoe UI',
       },
     });
 
