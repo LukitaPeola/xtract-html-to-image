@@ -1,8 +1,20 @@
+import fs from 'fs';
+import path from 'path';
 import { Resvg } from '@resvg/resvg-js';
+
+let fontRegular = null;
+let fontBold = null;
+
+try {
+  fontRegular = fs.readFileSync(path.join(process.cwd(), 'fonts', 'font.ttf'));
+  fontBold = fs.readFileSync(path.join(process.cwd(), 'fonts', 'font-bold.ttf'));
+} catch (e) {
+  console.warn('Could not load bundled fonts:', e.message);
+}
 
 function wrapText(text, maxCharsPerLine) {
   if (!text) return [];
-  const words = text.split(' ');
+  const words = String(text).split(' ');
   const lines = [];
   let currentLine = '';
 
@@ -71,15 +83,15 @@ function buildSlideSvg({
   };
 
   const t = themes[theme] || themes['dark-navy'];
-  const headlineLines = wrapText(headline, 28);
-  const bodyLines = wrapText(body, 48);
+  const headlineLines = wrapText(headline, 26);
+  const bodyLines = wrapText(body, 44);
 
-  const headlineStartY = 440;
-  const headlineLineHeight = 72;
+  const headlineStartY = 420;
+  const headlineLineHeight = 74;
   const headlineEndY = headlineStartY + headlineLines.length * headlineLineHeight;
 
   const cardY = headlineEndY + 40;
-  const cardHeight = Math.max(160, bodyLines.length * 48 + 80);
+  const cardHeight = Math.max(160, bodyLines.length * 50 + 80);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
   <defs>
@@ -102,7 +114,7 @@ function buildSlideSvg({
   <g transform="translate(90, 100)">
     <rect width="150" height="52" rx="26" fill="${t.cardBg}" stroke="${t.border}" stroke-width="1.5" />
     <circle cx="28" cy="26" r="5" fill="${t.accent}" />
-    <text x="46" y="33" fill="${t.accent}" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" letter-spacing="1">${escapeXml(badge)}</text>
+    <text x="46" y="34" fill="${t.accent}" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="1">${escapeXml(badge)}</text>
   </g>
 
   <!-- Headline -->
@@ -110,7 +122,7 @@ function buildSlideSvg({
     ${headlineLines
       .map(
         (line, idx) =>
-          `<text x="0" y="${headlineStartY + idx * headlineLineHeight}" fill="${t.textMain}" font-family="system-ui, -apple-system, sans-serif" font-size="58" font-weight="800" letter-spacing="-1">${escapeXml(line)}</text>`
+          `<text x="0" y="${headlineStartY + idx * headlineLineHeight}" fill="${t.textMain}" font-family="Segoe UI, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="-1">${escapeXml(line)}</text>`
       )
       .join('\n    ')}
   </g>
@@ -123,7 +135,7 @@ function buildSlideSvg({
     ${bodyLines
       .map(
         (line, idx) =>
-          `<text x="44" y="${64 + idx * 48}" fill="${t.textMuted}" font-family="system-ui, -apple-system, sans-serif" font-size="30" font-weight="500" line-height="1.5">${escapeXml(line)}</text>`
+          `<text x="44" y="${64 + idx * 50}" fill="${t.textMuted}" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="400" line-height="1.5">${escapeXml(line)}</text>`
       )
       .join('\n    ')}
   </g>`
@@ -134,20 +146,9 @@ function buildSlideSvg({
   <g transform="translate(90, 1220)">
     <line x1="0" y1="0" x2="900" y2="0" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
     <!-- Hint -->
-    <text x="900" y="52" text-anchor="end" fill="${t.accent}" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700">${escapeXml(footer_hint)}</text>
+    <text x="900" y="52" text-anchor="end" fill="${t.accent}" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">${escapeXml(footer_hint)}</text>
   </g>
 </svg>`;
-}
-
-let cachedFont = null;
-async function getFontBuffer() {
-  if (!cachedFont) {
-    const fontRes = await fetch(
-      'https://cdn.jsdelivr.net/fontsource/fonts/plus-jakarta-sans@latest/latin-700-normal.ttf'
-    );
-    cachedFont = Buffer.from(await fontRes.arrayBuffer());
-  }
-  return cachedFont;
 }
 
 export default async function handler(req, res) {
@@ -168,7 +169,8 @@ export default async function handler(req, res) {
     }
 
     const svgContent = bodyData.svg || buildSlideSvg(bodyData);
-    const fontBuffer = await getFontBuffer();
+
+    const fontBuffers = [fontRegular, fontBold].filter(Boolean);
 
     const resvg = new Resvg(svgContent, {
       fitTo: {
@@ -176,8 +178,8 @@ export default async function handler(req, res) {
         value: parseInt(bodyData.width, 10) || 1080,
       },
       font: {
-        fontBuffers: [fontBuffer],
-        defaultFontFamily: 'Plus Jakarta Sans',
+        fontBuffers,
+        defaultFontFamily: 'Segoe UI',
       },
     });
 
