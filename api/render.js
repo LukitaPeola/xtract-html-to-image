@@ -1,226 +1,19 @@
 import fs from 'fs';
 import path from 'path';
+import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 
-let cachedBuffers = null;
+let fontRegular = null;
+let fontBold = null;
 
-async function getFontBuffers() {
-  if (cachedBuffers && cachedBuffers.length > 0) return cachedBuffers;
-
-  const buffers = [];
-
-  // Try 1: Local bundled fonts
-  try {
+function loadFonts() {
+  if (!fontRegular || !fontBold) {
     const regularPath = path.join(process.cwd(), 'fonts', 'font.ttf');
     const boldPath = path.join(process.cwd(), 'fonts', 'font-bold.ttf');
-    if (fs.existsSync(regularPath)) {
-      buffers.push(fs.readFileSync(regularPath));
-    }
-    if (fs.existsSync(boldPath)) {
-      buffers.push(fs.readFileSync(boldPath));
-    }
-  } catch (e) {
-    console.warn('Local font read error:', e.message);
+    fontRegular = fs.readFileSync(regularPath);
+    fontBold = fs.readFileSync(boldPath);
   }
-
-  // Try 2: Inter TTF from jsdelivr Fontsource CDN (fast, ~65KB each)
-  if (buffers.length === 0) {
-    try {
-      const urls = [
-        'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.ttf',
-        'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.ttf',
-      ];
-      for (const u of urls) {
-        const res = await fetch(u);
-        if (res.ok) {
-          buffers.push(Buffer.from(await res.arrayBuffer()));
-        }
-      }
-    } catch (e) {
-      console.warn('CDN font fetch error:', e.message);
-    }
-  }
-
-  cachedBuffers = buffers;
-  return cachedBuffers;
-}
-
-function wrapText(text, maxCharsPerLine) {
-  if (!text) return [];
-  const words = String(text).split(' ');
-  const lines = [];
-  let currentLine = '';
-
-  for (const word of words) {
-    if ((currentLine + ' ' + word).trim().length <= maxCharsPerLine) {
-      currentLine = (currentLine + ' ' + word).trim();
-    } else {
-      if (currentLine) lines.push(currentLine);
-      currentLine = word;
-    }
-  }
-  if (currentLine) lines.push(currentLine);
-  return lines;
-}
-
-function escapeXml(unsafe) {
-  if (!unsafe) return '';
-  return String(unsafe)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
-function buildSlideSvg({
-  badge = '01 / 05',
-  headline = 'Título Principal del Slide',
-  body = 'Descripción concisa del caso de éxito o transformación.',
-  footer_hint = 'Deslizá →',
-  theme = 'dark-navy',
-  total_slides = 5,
-  slide_number = 1,
-}) {
-  const themes = {
-    'dark-navy': {
-      bgStart: '#0B0F19',
-      bgEnd: '#111827',
-      accent: '#55E57E',
-      accentGlow: '#55E57E',
-      textMain: '#FFFFFF',
-      textMuted: '#94A3B8',
-      cardBg: '#1A2234',
-      border: '#2E3A52',
-    },
-    'dark-purple': {
-      bgStart: '#0F0A1E',
-      bgEnd: '#191233',
-      accent: '#A855F7',
-      accentGlow: '#A855F7',
-      textMain: '#FFFFFF',
-      textMuted: '#CBD5E1',
-      cardBg: '#231846',
-      border: '#3F2C74',
-    },
-    'dark-slate': {
-      bgStart: '#090D16',
-      bgEnd: '#0F172A',
-      accent: '#38BDF8',
-      accentGlow: '#38BDF8',
-      textMain: '#FFFFFF',
-      textMuted: '#94A3B8',
-      cardBg: '#1E293B',
-      border: '#334155',
-    },
-  };
-
-  const t = themes[theme] || themes['dark-navy'];
-  const headlineLines = wrapText(headline, 26);
-  const bodyLines = wrapText(body, 44);
-
-  const headlineStartY = 420;
-  const headlineLineHeight = 74;
-  const headlineEndY = headlineStartY + headlineLines.length * headlineLineHeight;
-
-  const cardY = headlineEndY + 40;
-  const cardHeight = Math.max(160, bodyLines.length * 50 + 80);
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
-  <defs>
-    <style>
-      @font-face {
-        font-family: 'AppFont';
-        src: local('Plus Jakarta Sans'), local('Inter'), local('Roboto');
-        font-weight: 400;
-      }
-      @font-face {
-        font-family: 'AppFont';
-        src: local('Plus Jakarta Sans'), local('Inter'), local('Roboto');
-        font-weight: 700;
-      }
-      text {
-        font-family: 'AppFont', 'Plus Jakarta Sans', sans-serif;
-      }
-      .badge-text {
-        font-family: 'AppFont', 'Plus Jakarta Sans', sans-serif;
-        font-size: 20px;
-        font-weight: 700;
-        fill: ${t.accent};
-      }
-      .headline-text {
-        font-family: 'AppFont', 'Plus Jakarta Sans', sans-serif;
-        font-size: 58px;
-        font-weight: 700;
-        fill: ${t.textMain};
-      }
-      .body-text {
-        font-family: 'AppFont', 'Plus Jakarta Sans', sans-serif;
-        font-size: 30px;
-        font-weight: 400;
-        fill: ${t.textMuted};
-      }
-      .footer-text {
-        font-family: 'AppFont', 'Plus Jakarta Sans', sans-serif;
-        font-size: 24px;
-        font-weight: 700;
-        fill: ${t.accent};
-      }
-    </style>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="${t.bgStart}" />
-      <stop offset="100%" stop-color="${t.bgEnd}" />
-    </linearGradient>
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="120" />
-    </filter>
-  </defs>
-
-  <!-- Background -->
-  <rect width="1080" height="1350" fill="url(#bg)" />
-
-  <!-- Ambient Glow -->
-  <circle cx="950" cy="350" r="300" fill="${t.accentGlow}" opacity="0.18" filter="url(#glow)" />
-
-  <!-- Header: Badge -->
-  <g transform="translate(90, 100)">
-    <rect width="150" height="52" rx="26" fill="${t.cardBg}" stroke="${t.border}" stroke-width="1.5" />
-    <circle cx="28" cy="26" r="5" fill="${t.accent}" />
-    <text x="46" y="34" class="badge-text" letter-spacing="1">${escapeXml(badge)}</text>
-  </g>
-
-  <!-- Headline -->
-  <g transform="translate(90, 0)">
-    ${headlineLines
-      .map(
-        (line, idx) =>
-          `<text x="0" y="${headlineStartY + idx * headlineLineHeight}" class="headline-text" letter-spacing="-1">${escapeXml(line)}</text>`
-      )
-      .join('\n    ')}
-  </g>
-
-  <!-- Body Card -->
-  ${
-    bodyLines.length > 0
-      ? `<g transform="translate(90, ${cardY})">
-    <rect width="900" height="${cardHeight}" rx="28" fill="${t.cardBg}" stroke="${t.border}" stroke-width="1.5" opacity="0.95" />
-    ${bodyLines
-      .map(
-        (line, idx) =>
-          `<text x="44" y="${64 + idx * 50}" class="body-text">${escapeXml(line)}</text>`
-      )
-      .join('\n    ')}
-  </g>`
-      : ''
-  }
-
-  <!-- Footer -->
-  <g transform="translate(90, 1220)">
-    <line x1="0" y1="0" x2="900" y2="0" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
-    <!-- Hint -->
-    <text x="900" y="52" text-anchor="end" class="footer-text">${escapeXml(footer_hint)}</text>
-  </g>
-</svg>`;
+  return { fontRegular, fontBold };
 }
 
 export default async function handler(req, res) {
@@ -240,41 +33,261 @@ export default async function handler(req, res) {
       bodyData = req.query || {};
     }
 
-    if (req.query && req.query.debug === '1') {
-      const fonts = await getFontBuffers();
-      let dirFiles = [];
-      try {
-        dirFiles = fs.readdirSync(process.cwd());
-      } catch (e) {
-        dirFiles = [e.message];
-      }
-      return res.status(200).json({
-        cwd: process.cwd(),
-        dirFiles,
-        fontBuffersCount: fonts.length,
-        fontSizes: fonts.map((f) => (f ? f.length : 0)),
-      });
-    }
+    const {
+      badge = '01 / 05',
+      headline = 'Título Principal del Slide',
+      body = 'Descripción concisa del caso de éxito o transformación.',
+      footer_hint = 'Deslizá →',
+      theme = 'dark-navy',
+    } = bodyData;
 
-    const svgContent = bodyData.svg || buildSlideSvg(bodyData);
-    const fonts = await getFontBuffers();
+    const themes = {
+      'dark-navy': {
+        bg: '#0B0F19',
+        accent: '#55E57E',
+        textMain: '#FFFFFF',
+        textMuted: '#94A3B8',
+        cardBg: '#161F33',
+        cardBorder: '#27354F',
+      },
+      'dark-purple': {
+        bg: '#0D071B',
+        accent: '#A855F7',
+        textMain: '#FFFFFF',
+        textMuted: '#CBD5E1',
+        cardBg: '#20153D',
+        cardBorder: '#3E2A74',
+      },
+      'dark-slate': {
+        bg: '#0B1120',
+        accent: '#38BDF8',
+        textMain: '#FFFFFF',
+        textMuted: '#94A3B8',
+        cardBg: '#1E293B',
+        cardBorder: '#334155',
+      },
+    };
 
-    const fontDirs = [];
-    const localFontsDir = path.join(process.cwd(), 'fonts');
-    if (fs.existsSync(localFontsDir)) {
-      fontDirs.push(localFontsDir);
-    }
+    const t = themes[theme] || themes['dark-navy'];
+    const { fontRegular: regular, fontBold: bold } = loadFonts();
 
-    const resvg = new Resvg(svgContent, {
+    const element = {
+      type: 'div',
+      props: {
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          width: '100%',
+          height: '100%',
+          backgroundColor: t.bg,
+          padding: '80px 75px',
+          fontFamily: 'Plus Jakarta Sans',
+          position: 'relative',
+        },
+        children: [
+          // Ambient Glow
+          {
+            type: 'div',
+            props: {
+              style: {
+                position: 'absolute',
+                top: 100,
+                right: -100,
+                width: 600,
+                height: 600,
+                borderRadius: '50%',
+                backgroundColor: t.accent,
+                opacity: 0.12,
+                filter: 'blur(120px)',
+              },
+            },
+          },
+
+          // Header
+          {
+            type: 'div',
+            props: {
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+              },
+              children: [
+                {
+                  type: 'div',
+                  props: {
+                    style: {
+                      display: 'flex',
+                      alignItems: 'center',
+                      backgroundColor: t.cardBg,
+                      border: `1.5px solid ${t.cardBorder}`,
+                      borderRadius: 30,
+                      padding: '12px 24px',
+                      gap: 12,
+                    },
+                    children: [
+                      {
+                        type: 'div',
+                        props: {
+                          style: {
+                            width: 10,
+                            height: 10,
+                            borderRadius: '50%',
+                            backgroundColor: t.accent,
+                          },
+                        },
+                      },
+                      {
+                        type: 'span',
+                        props: {
+                          style: {
+                            color: t.accent,
+                            fontSize: 22,
+                            fontWeight: 700,
+                            letterSpacing: 1.5,
+                          },
+                          children: badge,
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+
+          // Center Content (Headline + Body Card)
+          {
+            type: 'div',
+            props: {
+              style: {
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 40,
+              },
+              children: [
+                {
+                  type: 'div',
+                  props: {
+                    style: {
+                      color: t.textMain,
+                      fontSize: 60,
+                      fontWeight: 700,
+                      lineHeight: 1.22,
+                      letterSpacing: -1,
+                    },
+                    children: headline,
+                  },
+                },
+                body
+                  ? {
+                      type: 'div',
+                      props: {
+                        style: {
+                          display: 'flex',
+                          backgroundColor: t.cardBg,
+                          border: `1.5px solid ${t.cardBorder}`,
+                          borderRadius: 24,
+                          padding: '36px 40px',
+                        },
+                        children: [
+                          {
+                            type: 'div',
+                            props: {
+                              style: {
+                                color: t.textMuted,
+                                fontSize: 32,
+                                fontWeight: 400,
+                                lineHeight: 1.55,
+                              },
+                              children: body,
+                            },
+                          },
+                        ],
+                      },
+                    }
+                  : null,
+              ].filter(Boolean),
+            },
+          },
+
+          // Footer
+          {
+            type: 'div',
+            props: {
+              style: {
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderTop: '1px solid rgba(255, 255, 255, 0.12)',
+                paddingTop: 30,
+              },
+              children: [
+                {
+                  type: 'div',
+                  props: {
+                    style: {
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    },
+                    children: [
+                      {
+                        type: 'span',
+                        props: {
+                          style: {
+                            color: '#FFFFFF',
+                            fontSize: 26,
+                            fontWeight: 700,
+                            letterSpacing: 2,
+                          },
+                          children: 'XTRACT',
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  type: 'span',
+                  props: {
+                    style: {
+                      color: t.accent,
+                      fontSize: 26,
+                      fontWeight: 700,
+                    },
+                    children: footer_hint,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+
+    const svg = await satori(element, {
+      width: 1080,
+      height: 1350,
+      fonts: [
+        {
+          name: 'Plus Jakarta Sans',
+          data: regular,
+          weight: 400,
+          style: 'normal',
+        },
+        {
+          name: 'Plus Jakarta Sans',
+          data: bold,
+          weight: 700,
+          style: 'normal',
+        },
+      ],
+    });
+
+    const resvg = new Resvg(svg, {
       fitTo: {
         mode: 'width',
-        value: parseInt(bodyData.width, 10) || 1080,
-      },
-      font: {
-        fontBuffers: fonts,
-        fontDirs: fontDirs.length > 0 ? fontDirs : undefined,
-        loadSystemFonts: false,
-        defaultFontFamily: 'Plus Jakarta Sans',
+        value: 1080,
       },
     });
 
@@ -286,7 +299,8 @@ export default async function handler(req, res) {
     return res.status(200).send(pngBuffer);
   } catch (error) {
     console.error('Render error:', error);
-    return res.status(500).json({ error: error.message || 'Error rendering SVG to PNG' });
+    return res.status(500).json({ error: error.message || 'Error rendering slide image' });
   }
 }
+
 
