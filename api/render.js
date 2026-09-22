@@ -1,20 +1,48 @@
+import fs from 'fs';
+import path from 'path';
 import { Resvg } from '@resvg/resvg-js';
 
-let cachedFont = null;
-async function loadFont() {
-  if (!cachedFont) {
+let cachedBuffers = null;
+
+async function getFontBuffers() {
+  if (cachedBuffers && cachedBuffers.length > 0) return cachedBuffers;
+
+  const buffers = [];
+
+  // Try 1: Local bundled fonts
+  try {
+    const regularPath = path.join(process.cwd(), 'fonts', 'font.ttf');
+    const boldPath = path.join(process.cwd(), 'fonts', 'font-bold.ttf');
+    if (fs.existsSync(regularPath)) {
+      buffers.push(fs.readFileSync(regularPath));
+    }
+    if (fs.existsSync(boldPath)) {
+      buffers.push(fs.readFileSync(boldPath));
+    }
+  } catch (e) {
+    console.warn('Local font read error:', e.message);
+  }
+
+  // Try 2: Fallback to Google Fonts CDN if local read is empty
+  if (buffers.length === 0) {
     try {
-      const res = await fetch(
-        'https://raw.githubusercontent.com/googlefonts/roboto/main/src/hinted/Roboto-Bold.ttf'
-      );
-      if (res.ok) {
-        cachedFont = Buffer.from(await res.arrayBuffer());
+      const urls = [
+        'https://raw.githubusercontent.com/googlefonts/roboto/main/src/hinted/Roboto-Regular.ttf',
+        'https://raw.githubusercontent.com/googlefonts/roboto/main/src/hinted/Roboto-Bold.ttf',
+      ];
+      for (const u of urls) {
+        const res = await fetch(u);
+        if (res.ok) {
+          buffers.push(Buffer.from(await res.arrayBuffer()));
+        }
       }
     } catch (e) {
-      console.warn('Failed to load font from URL:', e.message);
+      console.warn('CDN font fetch error:', e.message);
     }
   }
-  return cachedFont;
+
+  cachedBuffers = buffers;
+  return cachedBuffers;
 }
 
 function wrapText(text, maxCharsPerLine) {
@@ -98,7 +126,7 @@ function buildSlideSvg({
   const cardY = headlineEndY + 40;
   const cardHeight = Math.max(160, bodyLines.length * 50 + 80);
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350" style="font-family: 'Plus Jakarta Sans', 'Roboto', sans-serif;">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="${t.bgStart}" />
@@ -119,7 +147,7 @@ function buildSlideSvg({
   <g transform="translate(90, 100)">
     <rect width="150" height="52" rx="26" fill="${t.cardBg}" stroke="${t.border}" stroke-width="1.5" />
     <circle cx="28" cy="26" r="5" fill="${t.accent}" />
-    <text x="46" y="34" fill="${t.accent}" font-size="20" font-weight="bold" letter-spacing="1">${escapeXml(badge)}</text>
+    <text x="46" y="34" fill="${t.accent}" font-family="'Plus Jakarta Sans', 'Roboto', sans-serif" font-size="20" font-weight="bold" letter-spacing="1">${escapeXml(badge)}</text>
   </g>
 
   <!-- Headline -->
@@ -127,7 +155,7 @@ function buildSlideSvg({
     ${headlineLines
       .map(
         (line, idx) =>
-          `<text x="0" y="${headlineStartY + idx * headlineLineHeight}" fill="${t.textMain}" font-size="58" font-weight="bold" letter-spacing="-1">${escapeXml(line)}</text>`
+          `<text x="0" y="${headlineStartY + idx * headlineLineHeight}" fill="${t.textMain}" font-family="'Plus Jakarta Sans', 'Roboto', sans-serif" font-size="58" font-weight="bold" letter-spacing="-1">${escapeXml(line)}</text>`
       )
       .join('\n    ')}
   </g>
@@ -140,7 +168,7 @@ function buildSlideSvg({
     ${bodyLines
       .map(
         (line, idx) =>
-          `<text x="44" y="${64 + idx * 50}" fill="${t.textMuted}" font-size="30" font-weight="normal">${escapeXml(line)}</text>`
+          `<text x="44" y="${64 + idx * 50}" fill="${t.textMuted}" font-family="'Plus Jakarta Sans', 'Roboto', sans-serif" font-size="30" font-weight="normal">${escapeXml(line)}</text>`
       )
       .join('\n    ')}
   </g>`
@@ -151,7 +179,7 @@ function buildSlideSvg({
   <g transform="translate(90, 1220)">
     <line x1="0" y1="0" x2="900" y2="0" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
     <!-- Hint -->
-    <text x="900" y="52" text-anchor="end" fill="${t.accent}" font-size="24" font-weight="bold">${escapeXml(footer_hint)}</text>
+    <text x="900" y="52" text-anchor="end" fill="${t.accent}" font-family="'Plus Jakarta Sans', 'Roboto', sans-serif" font-size="24" font-weight="bold">${escapeXml(footer_hint)}</text>
   </g>
 </svg>`;
 }
@@ -174,7 +202,7 @@ export default async function handler(req, res) {
     }
 
     const svgContent = bodyData.svg || buildSlideSvg(bodyData);
-    const font = await loadFont();
+    const fonts = await getFontBuffers();
 
     const resvg = new Resvg(svgContent, {
       fitTo: {
@@ -182,8 +210,8 @@ export default async function handler(req, res) {
         value: parseInt(bodyData.width, 10) || 1080,
       },
       font: {
-        fontBuffers: font ? [font] : [],
-        defaultFontFamily: 'Roboto',
+        fontBuffers: fonts,
+        defaultFontFamily: fonts.length > 0 ? undefined : 'sans-serif',
       },
     });
 
@@ -198,3 +226,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error.message || 'Error rendering SVG to PNG' });
   }
 }
+
