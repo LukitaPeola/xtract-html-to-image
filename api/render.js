@@ -139,6 +139,17 @@ function buildSlideSvg({
 </svg>`;
 }
 
+let cachedFont = null;
+async function getFontBuffer() {
+  if (!cachedFont) {
+    const fontRes = await fetch(
+      'https://cdn.jsdelivr.net/fontsource/fonts/plus-jakarta-sans@latest/latin-700-normal.ttf'
+    );
+    cachedFont = Buffer.from(await fontRes.arrayBuffer());
+  }
+  return cachedFont;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
@@ -157,6 +168,7 @@ export default async function handler(req, res) {
     }
 
     const svgContent = bodyData.svg || buildSlideSvg(bodyData);
+    const fontBuffer = await getFontBuffer();
 
     const resvg = new Resvg(svgContent, {
       fitTo: {
@@ -164,7 +176,8 @@ export default async function handler(req, res) {
         value: parseInt(bodyData.width, 10) || 1080,
       },
       font: {
-        loadSystemFonts: true,
+        fontBuffers: [fontBuffer],
+        defaultFontFamily: 'Plus Jakarta Sans',
       },
     });
 
