@@ -1,195 +1,181 @@
-import { ImageResponse } from '@vercel/og';
+import { Resvg } from '@resvg/resvg-js';
 
-export const config = {
-  runtime: 'edge',
-};
+function wrapText(text, maxCharsPerLine) {
+  if (!text) return [];
+  const words = text.split(' ');
+  const lines = [];
+  let currentLine = '';
 
-export default async function handler(req) {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    });
-  }
-
-  let bodyData = {};
-  if (req.method === 'POST') {
-    try {
-      bodyData = await req.json();
-    } catch (e) {
-      bodyData = {};
+  for (const word of words) {
+    if ((currentLine + ' ' + word).trim().length <= maxCharsPerLine) {
+      currentLine = (currentLine + ' ' + word).trim();
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
     }
-  } else {
-    // Support GET query parameters for quick browser testing
-    const url = new URL(req.url);
-    bodyData = Object.fromEntries(url.searchParams.entries());
   }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
 
-  const {
-    badge = '01 / 05',
-    headline = 'Título Principal del Slide',
-    body = 'Descripción del caso de éxito o transformación operativa con Xtract.',
-    footer_hint = 'Deslizá →',
-    theme = 'dark-navy',
-    width = 1080,
-    height = 1350,
-  } = bodyData;
+function escapeXml(unsafe) {
+  if (!unsafe) return '';
+  return String(unsafe)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
 
+function buildSlideSvg({
+  badge = '01 / 05',
+  headline = 'Título Principal del Slide',
+  body = 'Descripción concisa del caso de éxito o transformación.',
+  footer_hint = 'Deslizá →',
+  theme = 'dark-navy',
+  total_slides = 5,
+  slide_number = 1,
+}) {
   const themes = {
     'dark-navy': {
-      bg: 'linear-gradient(145deg, #0B0F19 0%, #111827 50%, #0D1322 100%)',
+      bgStart: '#0B0F19',
+      bgEnd: '#111827',
       accent: '#55E57E',
-      border: 'rgba(255, 255, 255, 0.08)',
-      cardBg: 'rgba(255, 255, 255, 0.03)',
+      accentGlow: '#55E57E',
       textMain: '#FFFFFF',
       textMuted: '#94A3B8',
+      cardBg: '#1A2234',
+      border: '#2E3A52',
     },
     'dark-purple': {
-      bg: 'linear-gradient(145deg, #0F0A1E 0%, #191233 50%, #0F0A1E 100%)',
+      bgStart: '#0F0A1E',
+      bgEnd: '#191233',
       accent: '#A855F7',
-      border: 'rgba(168, 85, 247, 0.15)',
-      cardBg: 'rgba(255, 255, 255, 0.03)',
+      accentGlow: '#A855F7',
       textMain: '#FFFFFF',
       textMuted: '#CBD5E1',
+      cardBg: '#231846',
+      border: '#3F2C74',
     },
     'dark-slate': {
-      bg: 'linear-gradient(145deg, #090D16 0%, #0F172A 50%, #090D16 100%)',
+      bgStart: '#090D16',
+      bgEnd: '#0F172A',
       accent: '#38BDF8',
-      border: 'rgba(255, 255, 255, 0.08)',
-      cardBg: 'rgba(255, 255, 255, 0.03)',
+      accentGlow: '#38BDF8',
       textMain: '#FFFFFF',
       textMuted: '#94A3B8',
+      cardBg: '#1E293B',
+      border: '#334155',
     },
   };
 
-  const currentTheme = themes[theme] || themes['dark-navy'];
+  const t = themes[theme] || themes['dark-navy'];
+  const headlineLines = wrapText(headline, 28);
+  const bodyLines = wrapText(body, 48);
 
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          background: currentTheme.bg,
-          padding: '100px 90px',
-          fontFamily: 'sans-serif',
-          color: currentTheme.textMain,
-          position: 'relative',
-        }}
-      >
-        {/* Glow Sphere */}
-        <div
-          style={{
-            position: 'absolute',
-            width: '600px',
-            height: '600px',
-            borderRadius: '50%',
-            background: currentTheme.accent,
-            opacity: 0.12,
-            filter: 'blur(120px)',
-            top: '20%',
-            right: '-100px',
-          }}
-        />
+  const headlineStartY = 440;
+  const headlineLineHeight = 72;
+  const headlineEndY = headlineStartY + headlineLines.length * headlineLineHeight;
 
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '12px 24px',
-              borderRadius: '100px',
-              backgroundColor: currentTheme.cardBg,
-              border: `1px solid ${currentTheme.border}`,
-              color: currentTheme.accent,
-              fontSize: '22px',
-              fontWeight: 700,
-              letterSpacing: '0.05em',
-            }}
-          >
-            <div
-              style={{
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                backgroundColor: currentTheme.accent,
-                marginRight: '12px',
-                boxShadow: `0 0 10px ${currentTheme.accent}`,
-              }}
-            />
-            <span>{badge}</span>
-          </div>
-        </div>
+  const cardY = headlineEndY + 40;
+  const cardHeight = Math.max(160, bodyLines.length * 48 + 80);
 
-        {/* Content */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '36px', margin: 'auto 0' }}>
-          <div
-            style={{
-              fontSize: '58px',
-              fontWeight: 800,
-              lineHeight: 1.15,
-              letterSpacing: '-0.02em',
-              color: '#FFFFFF',
-            }}
-          >
-            {headline}
-          </div>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${t.bgStart}" />
+      <stop offset="100%" stop-color="${t.bgEnd}" />
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="120" />
+    </filter>
+  </defs>
 
-          {body ? (
-            <div
-              style={{
-                display: 'flex',
-                backgroundColor: currentTheme.cardBg,
-                border: `1px solid ${currentTheme.border}`,
-                borderRadius: '28px',
-                padding: '44px',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '32px',
-                  fontWeight: 500,
-                  lineHeight: 1.5,
-                  color: currentTheme.textMuted,
-                }}
-              >
-                {body}
-              </div>
-            </div>
-          ) : null}
-        </div>
+  <!-- Background -->
+  <rect width="1080" height="1350" fill="url(#bg)" />
 
-        {/* Footer */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingTop: '28px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          }}
-        >
-          <div style={{ fontSize: '24px', fontWeight: 600, color: currentTheme.accent }}>
-            {footer_hint}
-          </div>
-        </div>
-      </div>
-    ),
-    {
-      width: parseInt(width, 10) || 1080,
-      height: parseInt(height, 10) || 1350,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=86400',
-      },
+  <!-- Ambient Glow -->
+  <circle cx="950" cy="350" r="300" fill="${t.accentGlow}" opacity="0.18" filter="url(#glow)" />
+
+  <!-- Header: Badge -->
+  <g transform="translate(90, 100)">
+    <rect width="150" height="52" rx="26" fill="${t.cardBg}" stroke="${t.border}" stroke-width="1.5" />
+    <circle cx="28" cy="26" r="5" fill="${t.accent}" />
+    <text x="46" y="33" fill="${t.accent}" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" letter-spacing="1">${escapeXml(badge)}</text>
+  </g>
+
+  <!-- Headline -->
+  <g transform="translate(90, 0)">
+    ${headlineLines
+      .map(
+        (line, idx) =>
+          `<text x="0" y="${headlineStartY + idx * headlineLineHeight}" fill="${t.textMain}" font-family="system-ui, -apple-system, sans-serif" font-size="58" font-weight="800" letter-spacing="-1">${escapeXml(line)}</text>`
+      )
+      .join('\n    ')}
+  </g>
+
+  <!-- Body Card -->
+  ${
+    bodyLines.length > 0
+      ? `<g transform="translate(90, ${cardY})">
+    <rect width="900" height="${cardHeight}" rx="28" fill="${t.cardBg}" stroke="${t.border}" stroke-width="1.5" opacity="0.95" />
+    ${bodyLines
+      .map(
+        (line, idx) =>
+          `<text x="44" y="${64 + idx * 48}" fill="${t.textMuted}" font-family="system-ui, -apple-system, sans-serif" font-size="30" font-weight="500" line-height="1.5">${escapeXml(line)}</text>`
+      )
+      .join('\n    ')}
+  </g>`
+      : ''
+  }
+
+  <!-- Footer -->
+  <g transform="translate(90, 1220)">
+    <line x1="0" y1="0" x2="900" y2="0" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+    <!-- Hint -->
+    <text x="900" y="52" text-anchor="end" fill="${t.accent}" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700">${escapeXml(footer_hint)}</text>
+  </g>
+</svg>`;
+}
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  try {
+    let bodyData = {};
+    if (req.method === 'POST') {
+      bodyData = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+    } else {
+      bodyData = req.query || {};
     }
-  );
+
+    const svgContent = bodyData.svg || buildSlideSvg(bodyData);
+
+    const resvg = new Resvg(svgContent, {
+      fitTo: {
+        mode: 'width',
+        value: parseInt(bodyData.width, 10) || 1080,
+      },
+      font: {
+        loadSystemFonts: true,
+      },
+    });
+
+    const pngData = resvg.render();
+    const pngBuffer = pngData.asPng();
+
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.status(200).send(pngBuffer);
+  } catch (error) {
+    console.error('Render error:', error);
+    return res.status(500).json({ error: error.message || 'Error rendering SVG to PNG' });
+  }
 }

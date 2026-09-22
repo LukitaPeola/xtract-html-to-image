@@ -1,9 +1,10 @@
 {
   "name": "xtract-html-to-image",
   "version": "1.0.0",
-  "description": "Serverless Vercel OG image renderer for Xtract carousels",
+  "description": "Fast SVG to PNG Image Renderer for Xtract Carousels",
   "main": "api/render.js",
+  "type": "module",
   "dependencies": {
-    "@vercel/og": "^0.6.5"
+    "@resvg/resvg-js": "^2.6.2"
   }
 }
