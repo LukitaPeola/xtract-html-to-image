@@ -26,6 +26,10 @@ export default async function handler(req, res) {
     // Optimized Chromium configuration for Vercel Serverless
     chromium.setGraphicsMode = false;
 
+    const executablePath = await chromium.executablePath(
+      'https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar'
+    );
+
     browser = await puppeteer.launch({
       args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'],
       defaultViewport: {
@@ -33,7 +37,7 @@ export default async function handler(req, res) {
         height: parseInt(height, 10) || 1350,
         deviceScaleFactor: parseFloat(deviceScaleFactor) || 2
       },
-      executablePath: await chromium.executablePath(),
+      executablePath,
       headless: chromium.headless
     });
 
