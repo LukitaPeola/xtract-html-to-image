@@ -201,8 +201,30 @@ export default async function handler(req, res) {
       bodyData = req.query || {};
     }
 
+    if (req.query && req.query.debug === '1') {
+      const fonts = await getFontBuffers();
+      let dirFiles = [];
+      try {
+        dirFiles = fs.readdirSync(process.cwd());
+      } catch (e) {
+        dirFiles = [e.message];
+      }
+      return res.status(200).json({
+        cwd: process.cwd(),
+        dirFiles,
+        fontBuffersCount: fonts.length,
+        fontSizes: fonts.map((f) => (f ? f.length : 0)),
+      });
+    }
+
     const svgContent = bodyData.svg || buildSlideSvg(bodyData);
     const fonts = await getFontBuffers();
+
+    const fontDirs = [];
+    const localFontsDir = path.join(process.cwd(), 'fonts');
+    if (fs.existsSync(localFontsDir)) {
+      fontDirs.push(localFontsDir);
+    }
 
     const resvg = new Resvg(svgContent, {
       fitTo: {
@@ -211,6 +233,7 @@ export default async function handler(req, res) {
       },
       font: {
         fontBuffers: fonts,
+        fontDirs: fontDirs.length > 0 ? fontDirs : undefined,
         loadSystemFonts: false,
         defaultFontFamily: 'Inter',
       },
