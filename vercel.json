@@ -1,6 +1,7 @@
 {
   "functions": {
     "api/render.js": {
+      "includeFiles": "fonts/**",
       "memory": 1024,
       "maxDuration": 15
     }
