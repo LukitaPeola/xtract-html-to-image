@@ -235,7 +235,7 @@ export default async function handler(req, res) {
         fontBuffers: fonts,
         fontDirs: fontDirs.length > 0 ? fontDirs : undefined,
         loadSystemFonts: false,
-        defaultFontFamily: 'Inter',
+        defaultFontFamily: 'Plus Jakarta Sans',
       },
     });
 
