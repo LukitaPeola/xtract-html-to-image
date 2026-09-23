@@ -40,42 +40,73 @@ export default async function handler(req, res) {
     }
 
     const {
-      badge = '01 / 05',
-      headline = 'Título Principal del Slide',
-      body = 'Descripción concisa del caso de éxito o transformación.',
+      badge = 'Cuentas por Pagar',
+      headline = 'Menos trabajo manual. *Más control para tu empresa.*',
+      highlight_text = '',
+      body = 'Xtract automatiza tus cuentas por pagar, conectando ERP, facturas, pagos y gastos en un flujo simple y trazable.',
       footer_hint = 'Deslizá →',
-      theme = 'dark-navy',
     } = bodyData;
 
-    const themes = {
-      'dark-navy': {
-        bg: '#0B0F19',
-        accent: '#55E57E',
-        textMain: '#FFFFFF',
-        textMuted: '#94A3B8',
-        cardBg: '#161F33',
-        cardBorder: '#27354F',
-      },
-      'dark-purple': {
-        bg: '#0D071B',
-        accent: '#A855F7',
-        textMain: '#FFFFFF',
-        textMuted: '#CBD5E1',
-        cardBg: '#20153D',
-        cardBorder: '#3E2A74',
-      },
-      'dark-slate': {
-        bg: '#0B1120',
-        accent: '#38BDF8',
-        textMain: '#FFFFFF',
-        textMuted: '#94A3B8',
-        cardBg: '#1E293B',
-        cardBorder: '#334155',
-      },
-    };
-
-    const t = themes[theme] || themes['dark-navy'];
     const { fontRegular: regular, fontBold: bold } = loadFonts();
+
+    // Helper: Parse headline to highlight *words* or highlight_text in electric blue
+    function renderHeadlineNodes(text, highlightPhrase) {
+      if (!text) return [''];
+
+      // If text contains *highlighted text*
+      if (text.includes('*')) {
+        const parts = text.split('*');
+        return parts.map((part, i) => {
+          const isHighlighted = i % 2 === 1;
+          return {
+            type: 'span',
+            props: {
+              style: {
+                color: isHighlighted ? '#38BDF8' : '#FFFFFF',
+              },
+              children: part,
+            },
+          };
+        });
+      }
+
+      // If explicit highlight_text is supplied
+      if (highlightPhrase && text.includes(highlightPhrase)) {
+        const parts = text.split(highlightPhrase);
+        const nodes = [];
+        parts.forEach((p, idx) => {
+          if (p) {
+            nodes.push({
+              type: 'span',
+              props: { style: { color: '#FFFFFF' }, children: p },
+            });
+          }
+          if (idx < parts.length - 1) {
+            nodes.push({
+              type: 'span',
+              props: { style: { color: '#38BDF8' }, children: highlightPhrase },
+            });
+          }
+        });
+        return nodes;
+      }
+
+      // Default: clean text
+      return [
+        {
+          type: 'span',
+          props: { style: { color: '#FFFFFF' }, children: text },
+        },
+      ];
+    }
+
+    const headlineChildren = renderHeadlineNodes(headline, highlight_text);
+
+    // Clean badge label (strip any numeric counters like "01 / 05" if accidentally sent)
+    const cleanBadge = String(badge || 'Cuentas por Pagar')
+      .replace(/^\d+\s*\/\s*\d+$/i, 'Cuentas por Pagar')
+      .replace(/^0?\d+\s*·\s*/i, '')
+      .trim();
 
     const element = {
       type: 'div',
@@ -86,26 +117,44 @@ export default async function handler(req, res) {
           justifyContent: 'space-between',
           width: '100%',
           height: '100%',
-          backgroundColor: t.bg,
+          backgroundColor: '#070C1E',
           padding: '80px 75px',
           fontFamily: 'Plus Jakarta Sans',
           position: 'relative',
         },
         children: [
-          // Ambient Glow
+          // Ambient Radial Glow (Top Right)
           {
             type: 'div',
             props: {
               style: {
                 position: 'absolute',
-                top: 100,
-                right: -100,
+                top: -80,
+                right: -80,
+                width: 700,
+                height: 700,
+                borderRadius: '50%',
+                backgroundColor: '#1E40AF',
+                opacity: 0.3,
+                filter: 'blur(140px)',
+              },
+            },
+          },
+
+          // Ambient Radial Glow (Bottom Left)
+          {
+            type: 'div',
+            props: {
+              style: {
+                position: 'absolute',
+                bottom: -80,
+                left: -80,
                 width: 600,
                 height: 600,
                 borderRadius: '50%',
-                backgroundColor: t.accent,
-                opacity: 0.12,
-                filter: 'blur(120px)',
+                backgroundColor: '#1E3A8A',
+                opacity: 0.22,
+                filter: 'blur(140px)',
               },
             },
           },
@@ -116,17 +165,20 @@ export default async function handler(req, res) {
             props: {
               style: {
                 display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
+                width: '100%',
               },
               children: [
+                // Category Pill Badge (with glowing cyan/blue dot)
                 {
                   type: 'div',
                   props: {
                     style: {
                       display: 'flex',
                       alignItems: 'center',
-                      backgroundColor: t.cardBg,
-                      border: `1.5px solid ${t.cardBorder}`,
+                      backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                      border: '1.5px solid rgba(59, 130, 246, 0.4)',
                       borderRadius: 30,
                       padding: '12px 24px',
                       gap: 12,
@@ -139,7 +191,7 @@ export default async function handler(req, res) {
                             width: 10,
                             height: 10,
                             borderRadius: '50%',
-                            backgroundColor: t.accent,
+                            backgroundColor: '#38BDF8',
                           },
                         },
                       },
@@ -147,12 +199,49 @@ export default async function handler(req, res) {
                         type: 'span',
                         props: {
                           style: {
-                            color: t.accent,
+                            color: '#60A5FA',
                             fontSize: 22,
                             fontWeight: 700,
-                            letterSpacing: 1.5,
+                            letterSpacing: 1.2,
                           },
-                          children: badge,
+                          children: cleanBadge,
+                        },
+                      },
+                    ],
+                  },
+                },
+
+                // Top Right Brandmark
+                {
+                  type: 'div',
+                  props: {
+                    style: {
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    },
+                    children: [
+                      {
+                        type: 'span',
+                        props: {
+                          style: {
+                            color: '#38BDF8',
+                            fontSize: 28,
+                            fontWeight: 800,
+                          },
+                          children: '>',
+                        },
+                      },
+                      {
+                        type: 'span',
+                        props: {
+                          style: {
+                            color: '#FFFFFF',
+                            fontSize: 26,
+                            fontWeight: 800,
+                            letterSpacing: -0.5,
+                          },
+                          children: 'Xtract',
                         },
                       },
                     ],
@@ -162,27 +251,28 @@ export default async function handler(req, res) {
             },
           },
 
-          // Center Content (Headline + Body Card)
+          // Center Content (Headline + Dark Glass Body Card)
           {
             type: 'div',
             props: {
               style: {
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 40,
+                gap: 42,
               },
               children: [
                 {
                   type: 'div',
                   props: {
                     style: {
-                      color: t.textMain,
-                      fontSize: 60,
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      fontSize: 58,
                       fontWeight: 700,
                       lineHeight: 1.22,
                       letterSpacing: -1,
                     },
-                    children: headline,
+                    children: headlineChildren,
                   },
                 },
                 body
@@ -191,17 +281,17 @@ export default async function handler(req, res) {
                       props: {
                         style: {
                           display: 'flex',
-                          backgroundColor: t.cardBg,
-                          border: `1.5px solid ${t.cardBorder}`,
+                          backgroundColor: 'rgba(13, 22, 53, 0.8)',
+                          border: '1.5px solid rgba(59, 130, 246, 0.28)',
                           borderRadius: 24,
-                          padding: '36px 40px',
+                          padding: '38px 42px',
                         },
                         children: [
                           {
                             type: 'div',
                             props: {
                               style: {
-                                color: t.textMuted,
+                                color: '#CBD5E1',
                                 fontSize: 32,
                                 fontWeight: 400,
                                 lineHeight: 1.55,
@@ -225,10 +315,69 @@ export default async function handler(req, res) {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                borderTop: '1px solid rgba(255, 255, 255, 0.12)',
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
                 paddingTop: 30,
               },
               children: [
+                {
+                  type: 'div',
+                  props: {
+                    style: {
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 4,
+                    },
+                    children: [
+                      {
+                        type: 'div',
+                        props: {
+                          style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          },
+                          children: [
+                            {
+                              type: 'span',
+                              props: {
+                                style: {
+                                  color: '#38BDF8',
+                                  fontSize: 24,
+                                  fontWeight: 800,
+                                },
+                                children: '>',
+                              },
+                            },
+                            {
+                              type: 'span',
+                              props: {
+                                style: {
+                                  color: '#FFFFFF',
+                                  fontSize: 22,
+                                  fontWeight: 800,
+                                  letterSpacing: -0.5,
+                                },
+                                children: 'Xtract',
+                              },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        type: 'span',
+                        props: {
+                          style: {
+                            color: '#64748B',
+                            fontSize: 16,
+                            fontWeight: 500,
+                            letterSpacing: 0.5,
+                          },
+                          children: 'AI Accounting Platform',
+                        },
+                      },
+                    ],
+                  },
+                },
                 {
                   type: 'div',
                   props: {
@@ -242,26 +391,14 @@ export default async function handler(req, res) {
                         type: 'span',
                         props: {
                           style: {
-                            color: '#FFFFFF',
-                            fontSize: 26,
+                            color: '#38BDF8',
+                            fontSize: 24,
                             fontWeight: 700,
-                            letterSpacing: 2,
                           },
-                          children: 'XTRACT',
+                          children: footer_hint,
                         },
                       },
                     ],
-                  },
-                },
-                {
-                  type: 'span',
-                  props: {
-                    style: {
-                      color: t.accent,
-                      fontSize: 26,
-                      fontWeight: 700,
-                    },
-                    children: footer_hint,
                   },
                 },
               ],
@@ -308,5 +445,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error.message || 'Error rendering slide image' });
   }
 }
-
-
