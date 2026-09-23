@@ -16,6 +16,16 @@ function loadFonts() {
   return { fontRegular, fontBold };
 }
 
+function fixMojibake(str) {
+  if (typeof str !== 'string') return str;
+  try {
+    if (/[\u00C0-\u00DF][\u0080-\u00BF]/.test(str)) {
+      return Buffer.from(str, 'latin1').toString('utf8');
+    }
+  } catch (e) {}
+  return str;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
@@ -39,13 +49,18 @@ export default async function handler(req, res) {
       bodyData = req.query || {};
     }
 
-    const {
+    let {
       badge = 'Cuentas por Pagar',
       headline = 'Menos trabajo manual. *Más control en las operaciones.*',
       highlight_text = '',
       body = 'El 80% del tiempo de un equipo contable se pierde en tareas manuales: tipear comprobantes, revisar retenciones y pelear contra el ERP.',
       footer_hint = 'Deslizá →',
     } = bodyData;
+
+    badge = fixMojibake(badge);
+    headline = fixMojibake(headline);
+    body = fixMojibake(body);
+    footer_hint = fixMojibake(footer_hint);
 
     const { fontRegular: regular, fontBold: bold } = loadFonts();
 
