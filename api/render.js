@@ -54,7 +54,7 @@ export default async function handler(req, res) {
       headline = 'Menos trabajo manual. *Más control en las operaciones.*',
       highlight_text = '',
       body = 'El 80% del tiempo de un equipo contable se pierde en tareas manuales: tipear comprobantes, revisar retenciones y pelear contra el ERP.',
-      footer_hint = 'Deslizá →',
+      footer_hint = 'Deslizá ›',
     } = bodyData;
 
     badge = fixMojibake(badge);
@@ -120,9 +120,11 @@ export default async function handler(req, res) {
       .replace(/^0?\d+\s*·\s*/i, '')
       .trim();
 
-    // Clean footer hint
-    const cleanFooter = String(footer_hint || 'Deslizá →')
-      .replace(/->/g, '→');
+    // Clean footer hint (use chevron › supported by standard font)
+    const cleanFooter = String(footer_hint || 'Deslizá ›')
+      .replace(/[→\u2192]/g, '›')
+      .replace(/->/g, '›')
+      .replace(/[\uFFFD?]+/g, '›');
 
     // Exact Figma colors: Base #1C1A3E with #263D89 Radial Gradient Glow
     const element = {
