@@ -41,19 +41,18 @@ export default async function handler(req, res) {
 
     const {
       badge = 'Cuentas por Pagar',
-      headline = 'Menos trabajo manual. *Más control para tu empresa.*',
+      headline = 'Menos trabajo manual. *Más control en las operaciones.*',
       highlight_text = '',
-      body = 'Xtract automatiza tus cuentas por pagar, conectando ERP, facturas, pagos y gastos en un flujo simple y trazable.',
+      body = 'El 80% del tiempo de un equipo contable se pierde en tareas manuales: tipear comprobantes, revisar retenciones y pelear contra el ERP.',
       footer_hint = 'Deslizá →',
     } = bodyData;
 
     const { fontRegular: regular, fontBold: bold } = loadFonts();
 
-    // Helper: Parse headline to highlight *words* or highlight_text in electric blue
+    // Helper: Parse headline to highlight *words* or highlight_text in electric blue (#4E89FF)
     function renderHeadlineNodes(text, highlightPhrase) {
       if (!text) return [''];
 
-      // If text contains *highlighted text*
       if (text.includes('*')) {
         const parts = text.split('*');
         return parts.map((part, i) => {
@@ -62,7 +61,7 @@ export default async function handler(req, res) {
             type: 'span',
             props: {
               style: {
-                color: isHighlighted ? '#38BDF8' : '#FFFFFF',
+                color: isHighlighted ? '#4E89FF' : '#FFFFFF',
               },
               children: part,
             },
@@ -70,7 +69,6 @@ export default async function handler(req, res) {
         });
       }
 
-      // If explicit highlight_text is supplied
       if (highlightPhrase && text.includes(highlightPhrase)) {
         const parts = text.split(highlightPhrase);
         const nodes = [];
@@ -84,14 +82,13 @@ export default async function handler(req, res) {
           if (idx < parts.length - 1) {
             nodes.push({
               type: 'span',
-              props: { style: { color: '#38BDF8' }, children: highlightPhrase },
+              props: { style: { color: '#4E89FF' }, children: highlightPhrase },
             });
           }
         });
         return nodes;
       }
 
-      // Default: clean text
       return [
         {
           type: 'span',
@@ -102,12 +99,17 @@ export default async function handler(req, res) {
 
     const headlineChildren = renderHeadlineNodes(headline, highlight_text);
 
-    // Clean badge label (strip any numeric counters like "01 / 05" if accidentally sent)
+    // Clean badge label (strip any numeric counters or company mentions)
     const cleanBadge = String(badge || 'Cuentas por Pagar')
       .replace(/^\d+\s*\/\s*\d+$/i, 'Cuentas por Pagar')
       .replace(/^0?\d+\s*·\s*/i, '')
       .trim();
 
+    // Clean footer hint
+    const cleanFooter = String(footer_hint || 'Deslizá →')
+      .replace(/->/g, '→');
+
+    // Exact Figma colors: Base #1C1A3E with #263D89 Radial Gradient Glow
     const element = {
       type: 'div',
       props: {
@@ -117,148 +119,114 @@ export default async function handler(req, res) {
           justifyContent: 'space-between',
           width: '100%',
           height: '100%',
-          backgroundColor: '#070C1E',
-          padding: '80px 75px',
+          backgroundColor: '#1C1A3E',
+          padding: '85px 80px',
           fontFamily: 'Plus Jakarta Sans',
           position: 'relative',
+          overflow: 'hidden',
         },
         children: [
-          // Ambient Radial Glow (Top Right)
+          // Ambient Radial Glow (Figma #263D89) - Top Right
           {
             type: 'div',
             props: {
               style: {
                 position: 'absolute',
-                top: -80,
-                right: -80,
-                width: 700,
-                height: 700,
+                top: -120,
+                right: -120,
+                width: 850,
+                height: 850,
                 borderRadius: '50%',
-                backgroundColor: '#1E40AF',
-                opacity: 0.3,
-                filter: 'blur(140px)',
+                backgroundColor: '#263D89',
+                opacity: 0.65,
+                filter: 'blur(160px)',
               },
             },
           },
 
-          // Ambient Radial Glow (Bottom Left)
+          // Ambient Radial Glow (Figma #263D89) - Bottom Left
           {
             type: 'div',
             props: {
               style: {
                 position: 'absolute',
-                bottom: -80,
-                left: -80,
-                width: 600,
-                height: 600,
+                bottom: -150,
+                left: -150,
+                width: 750,
+                height: 750,
                 borderRadius: '50%',
-                backgroundColor: '#1E3A8A',
-                opacity: 0.22,
-                filter: 'blur(140px)',
+                backgroundColor: '#263D89',
+                opacity: 0.45,
+                filter: 'blur(160px)',
               },
             },
           },
 
-          // Header
+          // Header (Clean category badge only, ZERO logos)
           {
             type: 'div',
             props: {
               style: {
                 display: 'flex',
-                justifyContent: 'space-between',
+                justifyContent: 'flex-start',
                 alignItems: 'center',
                 width: '100%',
               },
               children: [
-                // Category Pill Badge (with glowing cyan/blue dot)
-                {
-                  type: 'div',
-                  props: {
-                    style: {
-                      display: 'flex',
-                      alignItems: 'center',
-                      backgroundColor: 'rgba(37, 99, 235, 0.15)',
-                      border: '1.5px solid rgba(59, 130, 246, 0.4)',
-                      borderRadius: 30,
-                      padding: '12px 24px',
-                      gap: 12,
-                    },
-                    children: [
-                      {
-                        type: 'div',
-                        props: {
-                          style: {
-                            width: 10,
-                            height: 10,
-                            borderRadius: '50%',
-                            backgroundColor: '#38BDF8',
-                          },
+                cleanBadge
+                  ? {
+                      type: 'div',
+                      props: {
+                        style: {
+                          display: 'flex',
+                          alignItems: 'center',
+                          backgroundColor: 'rgba(38, 61, 137, 0.35)',
+                          border: '1.5px solid rgba(78, 137, 255, 0.35)',
+                          borderRadius: 30,
+                          padding: '12px 24px',
+                          gap: 12,
                         },
-                      },
-                      {
-                        type: 'span',
-                        props: {
-                          style: {
-                            color: '#60A5FA',
-                            fontSize: 22,
-                            fontWeight: 700,
-                            letterSpacing: 1.2,
+                        children: [
+                          {
+                            type: 'div',
+                            props: {
+                              style: {
+                                width: 10,
+                                height: 10,
+                                borderRadius: '50%',
+                                backgroundColor: '#4E89FF',
+                              },
+                            },
                           },
-                          children: cleanBadge,
-                        },
-                      },
-                    ],
-                  },
-                },
-
-                // Top Right Brandmark
-                {
-                  type: 'div',
-                  props: {
-                    style: {
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                    },
-                    children: [
-                      {
-                        type: 'span',
-                        props: {
-                          style: {
-                            color: '#38BDF8',
-                            fontSize: 28,
-                            fontWeight: 800,
+                          {
+                            type: 'span',
+                            props: {
+                              style: {
+                                color: '#93C5FD',
+                                fontSize: 22,
+                                fontWeight: 700,
+                                letterSpacing: 1.2,
+                              },
+                              children: cleanBadge,
+                            },
                           },
-                          children: '>',
-                        },
+                        ],
                       },
-                      {
-                        type: 'span',
-                        props: {
-                          style: {
-                            color: '#FFFFFF',
-                            fontSize: 26,
-                            fontWeight: 800,
-                            letterSpacing: -0.5,
-                          },
-                          children: 'Xtract',
-                        },
-                      },
-                    ],
-                  },
-                },
-              ],
+                    }
+                  : null,
+              ].filter(Boolean),
             },
           },
 
-          // Center Content (Headline + Dark Glass Body Card)
+          // Center Content (Headline + Glass Card Body)
           {
             type: 'div',
             props: {
               style: {
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 42,
+                gap: 44,
+                margin: 'auto 0',
               },
               children: [
                 {
@@ -267,7 +235,7 @@ export default async function handler(req, res) {
                     style: {
                       display: 'flex',
                       flexWrap: 'wrap',
-                      fontSize: 58,
+                      fontSize: 60,
                       fontWeight: 700,
                       lineHeight: 1.22,
                       letterSpacing: -1,
@@ -281,17 +249,17 @@ export default async function handler(req, res) {
                       props: {
                         style: {
                           display: 'flex',
-                          backgroundColor: 'rgba(13, 22, 53, 0.8)',
-                          border: '1.5px solid rgba(59, 130, 246, 0.28)',
+                          backgroundColor: 'rgba(28, 26, 62, 0.75)',
+                          border: '1.5px solid rgba(78, 137, 255, 0.22)',
                           borderRadius: 24,
-                          padding: '38px 42px',
+                          padding: '40px 44px',
                         },
                         children: [
                           {
                             type: 'div',
                             props: {
                               style: {
-                                color: '#CBD5E1',
+                                color: '#E2E8F0',
                                 fontSize: 32,
                                 fontWeight: 400,
                                 lineHeight: 1.55,
@@ -307,98 +275,29 @@ export default async function handler(req, res) {
             },
           },
 
-          // Footer
+          // Footer (Clean swipe / save hint only, ZERO logos)
           {
             type: 'div',
             props: {
               style: {
                 display: 'flex',
-                justifyContent: 'space-between',
+                justifyContent: 'flex-end',
                 alignItems: 'center',
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                paddingTop: 30,
+                width: '100%',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                paddingTop: 28,
               },
               children: [
                 {
-                  type: 'div',
+                  type: 'span',
                   props: {
                     style: {
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 4,
+                      color: '#93C5FD',
+                      fontSize: 24,
+                      fontWeight: 700,
+                      letterSpacing: 0.5,
                     },
-                    children: [
-                      {
-                        type: 'div',
-                        props: {
-                          style: {
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 4,
-                          },
-                          children: [
-                            {
-                              type: 'span',
-                              props: {
-                                style: {
-                                  color: '#38BDF8',
-                                  fontSize: 24,
-                                  fontWeight: 800,
-                                },
-                                children: '>',
-                              },
-                            },
-                            {
-                              type: 'span',
-                              props: {
-                                style: {
-                                  color: '#FFFFFF',
-                                  fontSize: 22,
-                                  fontWeight: 800,
-                                  letterSpacing: -0.5,
-                                },
-                                children: 'Xtract',
-                              },
-                            },
-                          ],
-                        },
-                      },
-                      {
-                        type: 'span',
-                        props: {
-                          style: {
-                            color: '#64748B',
-                            fontSize: 16,
-                            fontWeight: 500,
-                            letterSpacing: 0.5,
-                          },
-                          children: 'AI Accounting Platform',
-                        },
-                      },
-                    ],
-                  },
-                },
-                {
-                  type: 'div',
-                  props: {
-                    style: {
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                    },
-                    children: [
-                      {
-                        type: 'span',
-                        props: {
-                          style: {
-                            color: '#38BDF8',
-                            fontSize: 24,
-                            fontWeight: 700,
-                          },
-                          children: footer_hint,
-                        },
-                      },
-                    ],
+                    children: cleanFooter,
                   },
                 },
               ],
