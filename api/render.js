@@ -26,6 +26,32 @@ function fixMojibake(str) {
   return str;
 }
 
+// Tokenize text into words with highlight flag so words NEVER glue together
+function tokenizeText(text, defaultColor = '#FFFFFF', highlightColor = '#4E89FF') {
+  if (!text) return [];
+  const tokens = [];
+  
+  // Normalize whitespace and split by asterisks for highlights
+  const parts = String(text).split('*');
+  parts.forEach((part, idx) => {
+    if (!part) return;
+    const isHighlighted = idx % 2 === 1;
+    const color = isHighlighted ? highlightColor : defaultColor;
+    
+    // Split into individual words
+    const words = part.trim().split(/\s+/).filter(Boolean);
+    words.forEach((word) => {
+      tokens.push({
+        word,
+        color,
+        isHighlighted,
+      });
+    });
+  });
+  
+  return tokens;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
@@ -52,9 +78,11 @@ export default async function handler(req, res) {
     let {
       badge = 'Cuentas por Pagar',
       headline = 'Menos trabajo manual. *Más control en las operaciones.*',
-      highlight_text = '',
       body = 'El 80% del tiempo de un equipo contable se pierde en tareas manuales: tipear comprobantes, revisar retenciones y pelear contra el ERP.',
       footer_hint = 'Deslizá >',
+      slide_number = 1,
+      total_slides = 5,
+      layout_style = '', // 'hero', 'glass-card', 'accent-bar', 'cta', 'minimal'
     } = bodyData;
 
     badge = fixMojibake(badge);
@@ -62,57 +90,31 @@ export default async function handler(req, res) {
     body = fixMojibake(body);
     footer_hint = fixMojibake(footer_hint);
 
-    const { fontRegular: regular, fontBold: bold } = loadFonts();
+    const slideNum = parseInt(slide_number, 10) || 1;
+    const totalNum = parseInt(total_slides, 10) || 5;
+    const isFirst = slideNum === 1;
+    const isLast = slideNum === totalNum;
 
-    // Helper: Parse headline to highlight *words* or highlight_text in electric blue (#4E89FF)
-    function renderHeadlineNodes(text, highlightPhrase) {
-      if (!text) return [''];
-
-      if (text.includes('*')) {
-        const parts = text.split('*');
-        return parts.map((part, i) => {
-          const isHighlighted = i % 2 === 1;
-          return {
-            type: 'span',
-            props: {
-              style: {
-                color: isHighlighted ? '#4E89FF' : '#FFFFFF',
-              },
-              children: part,
-            },
-          };
-        });
+    // Automatic layout selection to guarantee visual rhythm across the carousel
+    let activeLayout = layout_style;
+    if (!activeLayout) {
+      if (isFirst) {
+        activeLayout = 'hero'; // Clean editorial typography with left accent bar
+      } else if (isLast) {
+        activeLayout = 'cta'; // Highlighted action card
+      } else if (slideNum % 2 === 0) {
+        activeLayout = 'glass-card'; // Classic frosted container
+      } else {
+        activeLayout = 'accent-bar'; // Left glowing neon border card
       }
-
-      if (highlightPhrase && text.includes(highlightPhrase)) {
-        const parts = text.split(highlightPhrase);
-        const nodes = [];
-        parts.forEach((p, idx) => {
-          if (p) {
-            nodes.push({
-              type: 'span',
-              props: { style: { color: '#FFFFFF' }, children: p },
-            });
-          }
-          if (idx < parts.length - 1) {
-            nodes.push({
-              type: 'span',
-              props: { style: { color: '#4E89FF' }, children: highlightPhrase },
-            });
-          }
-        });
-        return nodes;
-      }
-
-      return [
-        {
-          type: 'span',
-          props: { style: { color: '#FFFFFF' }, children: text },
-        },
-      ];
     }
 
-    const headlineChildren = renderHeadlineNodes(headline, highlight_text);
+    const { fontRegular: regular, fontBold: bold } = loadFonts();
+
+    // Word tokens for headline (guaranteed space between words)
+    const headlineTokens = tokenizeText(headline, '#FFFFFF', '#4E89FF');
+    // Word tokens for body (supports *highlighted* words inside body text)
+    const bodyTokens = tokenizeText(body, '#CBD5E1', '#93C5FD');
 
     // Clean badge label (strip any numeric counters or company mentions)
     const cleanBadge = String(badge || 'Cuentas por Pagar')
@@ -120,13 +122,111 @@ export default async function handler(req, res) {
       .replace(/^0?\d+\s*·\s*/i, '')
       .trim();
 
-    // Clean footer hint (use ASCII > supported across all fonts without missing glyph boxes)
-    const cleanFooter = String(footer_hint || 'Deslizá >')
+    // Clean footer hint
+    const cleanFooter = String(footer_hint || (isLast ? 'Guardá este post' : 'Deslizá >'))
       .replace(/[›→\u203A\u2192]/g, '>')
       .replace(/->/g, '>')
       .replace(/[\uFFFD?]+/g, '');
 
-    // Exact Figma colors: Base #1C1A3E with #263D89 Radial Gradient Glow
+    // Render Body Section based on active layout to avoid repetitive boxes
+    function renderBodySection() {
+      if (!bodyTokens.length) return null;
+
+      const bodyContentSpans = bodyTokens.map((t, idx) => ({
+        type: 'span',
+        props: {
+          style: {
+            color: t.color,
+            fontWeight: t.isHighlighted ? 700 : 400,
+            marginRight: 10,
+          },
+          children: t.word,
+        },
+      }));
+
+      if (activeLayout === 'hero') {
+        // Hero Portada: Minimalist with a luminous left accent line
+        return {
+          type: 'div',
+          props: {
+            style: {
+              display: 'flex',
+              flexWrap: 'wrap',
+              borderLeft: '5px solid #4E89FF',
+              paddingLeft: 28,
+              paddingTop: 8,
+              paddingBottom: 8,
+              fontSize: 32,
+              lineHeight: 1.55,
+            },
+            children: bodyContentSpans,
+          },
+        };
+      }
+
+      if (activeLayout === 'accent-bar') {
+        // Accent Bar: Dark floating panel with glowing left edge
+        return {
+          type: 'div',
+          props: {
+            style: {
+              display: 'flex',
+              flexWrap: 'wrap',
+              backgroundColor: 'rgba(38, 61, 137, 0.22)',
+              borderLeft: '6px solid #4E89FF',
+              borderTop: '1px solid rgba(78, 137, 255, 0.15)',
+              borderRight: '1px solid rgba(78, 137, 255, 0.15)',
+              borderBottom: '1px solid rgba(78, 137, 255, 0.15)',
+              borderRadius: '0 24px 24px 0',
+              padding: '38px 42px',
+              fontSize: 31,
+              lineHeight: 1.55,
+            },
+            children: bodyContentSpans,
+          },
+        };
+      }
+
+      if (activeLayout === 'cta') {
+        // CTA Card: Action container with highlighted border
+        return {
+          type: 'div',
+          props: {
+            style: {
+              display: 'flex',
+              flexWrap: 'wrap',
+              backgroundColor: 'rgba(38, 61, 137, 0.35)',
+              border: '1.5px solid rgba(78, 137, 255, 0.45)',
+              borderRadius: 24,
+              padding: '40px 44px',
+              fontSize: 32,
+              lineHeight: 1.55,
+            },
+            children: bodyContentSpans,
+          },
+        };
+      }
+
+      // Default: Clean Frosted Glass Card
+      return {
+        type: 'div',
+        props: {
+          style: {
+            display: 'flex',
+            flexWrap: 'wrap',
+            backgroundColor: 'rgba(28, 26, 62, 0.75)',
+            border: '1.5px solid rgba(78, 137, 255, 0.22)',
+            borderRadius: 24,
+            padding: '40px 44px',
+            fontSize: 31,
+            lineHeight: 1.55,
+          },
+          children: bodyContentSpans,
+        },
+      };
+    }
+
+    // Exact Figma Layout & True Vector Radial Gradients (zero blur boxes / zero square artifacts)
     const element = {
       type: 'div',
       props: {
@@ -143,39 +243,69 @@ export default async function handler(req, res) {
           overflow: 'hidden',
         },
         children: [
-          // Ambient Radial Glow (Figma #263D89) - Top Right
+          // Native SVG Background with Pure Radial Gradients (Exact Figma #1C1A3E & #263D89)
           {
-            type: 'div',
+            type: 'svg',
             props: {
+              width: 1080,
+              height: 1350,
+              viewBox: '0 0 1080 1350',
               style: {
                 position: 'absolute',
-                top: -120,
-                right: -120,
-                width: 850,
-                height: 850,
-                borderRadius: '50%',
-                backgroundColor: '#263D89',
-                opacity: 0.65,
-                filter: 'blur(160px)',
+                top: 0,
+                left: 0,
+                width: 1080,
+                height: 1350,
               },
-            },
-          },
-
-          // Ambient Radial Glow (Figma #263D89) - Bottom Left
-          {
-            type: 'div',
-            props: {
-              style: {
-                position: 'absolute',
-                bottom: -150,
-                left: -150,
-                width: 750,
-                height: 750,
-                borderRadius: '50%',
-                backgroundColor: '#263D89',
-                opacity: 0.45,
-                filter: 'blur(160px)',
-              },
+              children: [
+                {
+                  type: 'rect',
+                  props: { width: 1080, height: 1350, fill: '#1C1A3E' },
+                },
+                {
+                  type: 'defs',
+                  props: {
+                    children: [
+                      {
+                        type: 'radialGradient',
+                        props: {
+                          id: 'figmaGlowTop',
+                          cx: '85%',
+                          cy: '15%',
+                          r: '65%',
+                          children: [
+                            { type: 'stop', props: { offset: '0%', stopColor: '#263D89', stopOpacity: '0.85' } },
+                            { type: 'stop', props: { offset: '55%', stopColor: '#263D89', stopOpacity: '0.35' } },
+                            { type: 'stop', props: { offset: '100%', stopColor: '#1C1A3E', stopOpacity: '0' } },
+                          ],
+                        },
+                      },
+                      {
+                        type: 'radialGradient',
+                        props: {
+                          id: 'figmaGlowBottom',
+                          cx: '15%',
+                          cy: '85%',
+                          r: '55%',
+                          children: [
+                            { type: 'stop', props: { offset: '0%', stopColor: '#263D89', stopOpacity: '0.6' } },
+                            { type: 'stop', props: { offset: '50%', stopColor: '#263D89', stopOpacity: '0.2' } },
+                            { type: 'stop', props: { offset: '100%', stopColor: '#1C1A3E', stopOpacity: '0' } },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  type: 'rect',
+                  props: { width: 1080, height: 1350, fill: 'url(#figmaGlowTop)' },
+                },
+                {
+                  type: 'rect',
+                  props: { width: 1080, height: 1350, fill: 'url(#figmaGlowBottom)' },
+                },
+              ],
             },
           },
 
@@ -188,6 +318,8 @@ export default async function handler(req, res) {
                 justifyContent: 'flex-start',
                 alignItems: 'center',
                 width: '100%',
+                position: 'relative',
+                zIndex: 2,
               },
               children: [
                 cleanBadge
@@ -235,59 +367,45 @@ export default async function handler(req, res) {
             },
           },
 
-          // Center Content (Headline + Glass Card Body)
+          // Center Content (Headline + Dynamic Layout Body)
           {
             type: 'div',
             props: {
               style: {
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 44,
+                gap: isFirst ? 48 : 42,
                 margin: 'auto 0',
+                position: 'relative',
+                zIndex: 2,
               },
               children: [
+                // Headline with word-level flex spacing (guarantees NO glued words)
                 {
                   type: 'div',
                   props: {
                     style: {
                       display: 'flex',
                       flexWrap: 'wrap',
-                      fontSize: 60,
+                      fontSize: isFirst ? 64 : 58,
                       fontWeight: 700,
-                      lineHeight: 1.22,
+                      lineHeight: 1.2,
                       letterSpacing: -1,
                     },
-                    children: headlineChildren,
-                  },
-                },
-                body
-                  ? {
-                      type: 'div',
+                    children: headlineTokens.map((token) => ({
+                      type: 'span',
                       props: {
                         style: {
-                          display: 'flex',
-                          backgroundColor: 'rgba(28, 26, 62, 0.75)',
-                          border: '1.5px solid rgba(78, 137, 255, 0.22)',
-                          borderRadius: 24,
-                          padding: '40px 44px',
+                          color: token.color,
+                          marginRight: 16, // Explicit margin to separate words perfectly
                         },
-                        children: [
-                          {
-                            type: 'div',
-                            props: {
-                              style: {
-                                color: '#E2E8F0',
-                                fontSize: 32,
-                                fontWeight: 400,
-                                lineHeight: 1.55,
-                              },
-                              children: body,
-                            },
-                          },
-                        ],
+                        children: token.word,
                       },
-                    }
-                  : null,
+                    })),
+                  },
+                },
+                // Dynamic body variant based on slide role
+                renderBodySection(),
               ].filter(Boolean),
             },
           },
@@ -303,6 +421,8 @@ export default async function handler(req, res) {
                 width: '100%',
                 borderTop: '1px solid rgba(255, 255, 255, 0.08)',
                 paddingTop: 28,
+                position: 'relative',
+                zIndex: 2,
               },
               children: [
                 {
