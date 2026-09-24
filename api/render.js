@@ -100,18 +100,14 @@ export default async function handler(req, res) {
     const isFirst = slideNum === 1;
     const isLast = slideNum === totalNum;
 
-    // Automatic layout selection to guarantee visual rhythm across the carousel
-    let activeLayout = layout_style;
-    if (!activeLayout) {
-      if (isFirst) {
-        activeLayout = 'hero'; // Clean editorial typography with left accent bar
-      } else if (isLast) {
-        activeLayout = 'cta'; // Highlighted action card
-      } else if (slideNum % 2 === 0) {
-        activeLayout = 'glass-card'; // Classic frosted container
-      } else {
-        activeLayout = 'accent-bar'; // Left glowing neon border card
-      }
+    // Ensure consistent styling across all slides of the same post
+    let activeLayout = layout_style || 'glass-card';
+    if (activeLayout === 'minimal' || activeLayout === 'minimal-clean') {
+      activeLayout = isLast ? 'cta-minimal' : 'minimal-clean';
+    } else if (activeLayout === 'accent-panel' || activeLayout === 'accent-bar') {
+      activeLayout = isLast ? 'cta' : 'accent-panel';
+    } else {
+      activeLayout = isLast ? 'cta' : 'glass-card';
     }
 
     const { fontRegular: regular, fontBold: bold } = loadFonts();
@@ -149,8 +145,8 @@ export default async function handler(req, res) {
         },
       }));
 
-      if (activeLayout === 'hero') {
-        // Hero Portada: Minimalist with a luminous left accent line
+      if (activeLayout === 'minimal-clean') {
+        // Minimal Clean: Editorial text with a sleek vertical neon blue line (no background box)
         return {
           type: 'div',
           props: {
@@ -161,6 +157,26 @@ export default async function handler(req, res) {
               paddingLeft: 28,
               paddingTop: 8,
               paddingBottom: 8,
+              fontSize: 32,
+              lineHeight: 1.55,
+            },
+            children: bodyContentSpans,
+          },
+        };
+      }
+
+      if (activeLayout === 'cta-minimal') {
+        // CTA Minimal: Sleek conclusion with highlighted CTA line
+        return {
+          type: 'div',
+          props: {
+            style: {
+              display: 'flex',
+              flexWrap: 'wrap',
+              borderLeft: '6px solid #4E89FF',
+              paddingLeft: 28,
+              paddingTop: 10,
+              paddingBottom: 10,
               fontSize: 32,
               lineHeight: 1.55,
             },
