@@ -330,13 +330,13 @@ export default async function handler(req, res) {
             },
           },
 
-          // Header (Clean category badge only, ZERO logos)
+          // Header (Category badge on the left, Official white Xtract X on the right)
           {
             type: 'div',
             props: {
               style: {
                 display: 'flex',
-                justifyContent: 'flex-start',
+                justifyContent: 'space-between',
                 alignItems: 'center',
                 width: '100%',
                 position: 'relative',
@@ -383,8 +383,35 @@ export default async function handler(req, res) {
                         ],
                       },
                     }
-                  : null,
-              ].filter(Boolean),
+                  : { type: 'div', props: {} },
+
+                // Official Xtract "X" Isotipo in Pure White (top right)
+                {
+                  type: 'svg',
+                  props: {
+                    width: 44,
+                    height: 40,
+                    viewBox: '0 0 66 60',
+                    fill: 'none',
+                    children: [
+                      {
+                        type: 'path',
+                        props: {
+                          d: 'M9.51438 58.9809H0.473414C0.0959864 58.9809 -0.127325 58.5611 0.0802602 58.2481L19.2898 29.3953C19.3951 29.2381 19.3951 29.0321 19.2898 28.8748L0.767493 0.731266C0.561481 0.418316 0.786365 0 1.16222 0H10.2063C10.3652 0 10.513 0.0802034 10.6011 0.212303L29.4662 28.8748C29.5699 29.0336 29.5699 29.2381 29.4662 29.3953L9.90596 58.7702C9.8179 58.9023 9.67164 58.9809 9.51281 58.9809H9.51438Z',
+                          fill: '#FFFFFF',
+                        },
+                      },
+                      {
+                        type: 'path',
+                        props: {
+                          d: 'M56.3185 58.9809C56.1581 58.9809 56.0087 58.8992 55.9222 58.7639L40.9226 35.3949H40.8377L25.7752 58.7639C25.6887 58.8992 25.5393 58.9794 25.3789 58.9794H16.8836C16.5062 58.9794 16.2829 58.5595 16.4904 58.2465L35.6999 29.3938C35.8053 29.2365 35.8053 29.0305 35.6999 28.8732L17.1777 0.731266C16.9717 0.418316 17.1966 0 17.5724 0H26.6134C26.7738 0 26.9232 0.081776 27.0097 0.217021L41.1915 22.3044H41.2764L54.0178 2.97067C55.2397 1.11656 57.3124 0 59.5329 0H64.5983C64.9773 0 65.2022 0.424606 64.9883 0.737557L46.2491 28.1089C46.1405 28.2678 46.139 28.4754 46.2443 28.6358L65.7605 58.2497C65.9665 58.5626 65.7416 58.9809 65.3673 58.9809H56.3185Z',
+                          fill: '#FFFFFF',
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
             },
           },
 
