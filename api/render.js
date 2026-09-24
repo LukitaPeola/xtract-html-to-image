@@ -41,11 +41,16 @@ function tokenizeText(text, defaultColor = '#FFFFFF', highlightColor = '#4E89FF'
     // Split into individual words
     const words = part.trim().split(/\s+/).filter(Boolean);
     words.forEach((word) => {
-      tokens.push({
-        word,
-        color,
-        isHighlighted,
-      });
+      // If word is only closing punctuation like '?', '!', '.', ',', append to previous token
+      if (/^[?!.,:;]+$/.test(word) && tokens.length > 0) {
+        tokens[tokens.length - 1].word += word;
+      } else {
+        tokens.push({
+          word,
+          color,
+          isHighlighted,
+        });
+      }
     });
   });
   
