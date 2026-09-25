@@ -129,7 +129,7 @@ export default async function handler(req, res) {
       .replace(/->/g, '>')
       .replace(/[\uFFFD?]+/g, '');
 
-    // Render Body Section based on active layout to avoid repetitive boxes
+    // Render Body Section: Clean editorial text with sleek vertical electric blue line (zero background card box)
     function renderBodySection() {
       if (!bodyTokens.length) return null;
 
@@ -145,101 +145,17 @@ export default async function handler(req, res) {
         },
       }));
 
-      if (activeLayout === 'minimal-clean') {
-        // Minimal Clean: Editorial text with a sleek vertical neon blue line (no background box)
-        return {
-          type: 'div',
-          props: {
-            style: {
-              display: 'flex',
-              flexWrap: 'wrap',
-              borderLeft: '5px solid #4E89FF',
-              paddingLeft: 28,
-              paddingTop: 8,
-              paddingBottom: 8,
-              fontSize: 32,
-              lineHeight: 1.55,
-            },
-            children: bodyContentSpans,
-          },
-        };
-      }
-
-      if (activeLayout === 'cta-minimal') {
-        // CTA Minimal: Sleek conclusion with highlighted CTA line
-        return {
-          type: 'div',
-          props: {
-            style: {
-              display: 'flex',
-              flexWrap: 'wrap',
-              borderLeft: '6px solid #4E89FF',
-              paddingLeft: 28,
-              paddingTop: 10,
-              paddingBottom: 10,
-              fontSize: 32,
-              lineHeight: 1.55,
-            },
-            children: bodyContentSpans,
-          },
-        };
-      }
-
-      if (activeLayout === 'accent-bar') {
-        // Accent Bar: Dark floating panel with glowing left edge
-        return {
-          type: 'div',
-          props: {
-            style: {
-              display: 'flex',
-              flexWrap: 'wrap',
-              backgroundColor: 'rgba(38, 61, 137, 0.22)',
-              borderLeft: '6px solid #4E89FF',
-              borderTop: '1px solid rgba(78, 137, 255, 0.15)',
-              borderRight: '1px solid rgba(78, 137, 255, 0.15)',
-              borderBottom: '1px solid rgba(78, 137, 255, 0.15)',
-              borderRadius: '0 24px 24px 0',
-              padding: '38px 42px',
-              fontSize: 31,
-              lineHeight: 1.55,
-            },
-            children: bodyContentSpans,
-          },
-        };
-      }
-
-      if (activeLayout === 'cta') {
-        // CTA Card: Action container with highlighted border
-        return {
-          type: 'div',
-          props: {
-            style: {
-              display: 'flex',
-              flexWrap: 'wrap',
-              backgroundColor: 'rgba(38, 61, 137, 0.35)',
-              border: '1.5px solid rgba(78, 137, 255, 0.45)',
-              borderRadius: 24,
-              padding: '40px 44px',
-              fontSize: 32,
-              lineHeight: 1.55,
-            },
-            children: bodyContentSpans,
-          },
-        };
-      }
-
-      // Default: Clean Frosted Glass Card
       return {
         type: 'div',
         props: {
           style: {
             display: 'flex',
             flexWrap: 'wrap',
-            backgroundColor: 'rgba(28, 26, 62, 0.75)',
-            border: '1.5px solid rgba(78, 137, 255, 0.22)',
-            borderRadius: 24,
-            padding: '40px 44px',
-            fontSize: 31,
+            borderLeft: '5px solid #4E89FF',
+            paddingLeft: 28,
+            paddingTop: 8,
+            paddingBottom: 8,
+            fontSize: 32,
             lineHeight: 1.55,
           },
           children: bodyContentSpans,
